@@ -10,13 +10,6 @@
 
 ---
 
-## 🚀 Live Demo
-
-**Backend API:** `http://localhost:8000`  
-**Frontend:** `http://localhost:3000`
-
----
-
 ## 📌 Problem Statement
 
 The **Kessler Syndrome** is a catastrophic scenario in which the density of objects in low Earth orbit (LEO) becomes high enough that collisions between objects generate debris that causes further collisions in a cascade effect — potentially rendering all orbital altitudes permanently unusable for satellites, space stations, and future missions.
@@ -302,7 +295,6 @@ MIT License — see [LICENSE](LICENSE) for details.
 
 ---
 
-## 👥 Team
 
 Built for the **IBM August Challenge 2026 — Advance Space Exploration with AI**
 
