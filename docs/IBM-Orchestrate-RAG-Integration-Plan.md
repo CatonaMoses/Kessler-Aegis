@@ -5,6 +5,8 @@
 **Repository:** `CatonaMoses/Kessler-Aegis`  
 **Document purpose:** Define how to add IBM watsonx Orchestrate and retrieval-augmented generation (RAG) capabilities to Kessler Aegis.
 
+**Download for Microsoft Word:** Open [`IBM-Orchestrate-RAG-Integration-Plan.html`](./IBM-Orchestrate-RAG-Integration-Plan.html) in Word (or download it from GitHub and open locally) for a Word-compatible formatted version of this plan.
+
 ---
 
 ## 1. Executive Summary

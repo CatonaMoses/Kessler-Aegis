@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>IBM watsonx Orchestrate and RAG Integration Plan</title>
+  <style>
+    body {
+      font-family: Calibri, "Segoe UI", Arial, sans-serif;
+      line-height: 1.5;
+      margin: 2rem auto;
+      max-width: 980px;
+      color: #1f2937;
+      background: #ffffff;
+      padding: 0 1rem;
+    }
+    h1, h2, h3, h4 {
+      color: #111827;
+      margin-top: 1.4em;
+      margin-bottom: 0.5em;
+      page-break-after: avoid;
+    }
+    p, li {
+      font-size: 11pt;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 1em 0;
+      font-size: 10.5pt;
+    }
+    th, td {
+      border: 1px solid #d1d5db;
+      padding: 8px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th {
+      background: #f3f4f6;
+      font-weight: 600;
+    }
+    code {
+      font-family: Consolas, "Courier New", monospace;
+      background: #f3f4f6;
+      border-radius: 3px;
+      padding: 0.1em 0.3em;
+      font-size: 0.95em;
+    }
+    pre {
+      background: #111827;
+      color: #f9fafb;
+      padding: 0.9em;
+      border-radius: 6px;
+      overflow-x: auto;
+      page-break-inside: avoid;
+    }
+    pre code {
+      background: transparent;
+      color: inherit;
+      padding: 0;
+    }
+    blockquote {
+      margin: 1em 0;
+      padding: 0.4em 1em;
+      border-left: 4px solid #9ca3af;
+      color: #374151;
+      background: #f9fafb;
+    }
+    hr {
+      border: 0;
+      border-top: 1px solid #e5e7eb;
+      margin: 1.5em 0;
+    }
+    @media print {
+      body {
+        max-width: 100%;
+        margin: 0;
+      }
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+    }
+  </style>
+</head>
+<body>
+<h1 id="ibm-watsonx-orchestrate-and-rag-integration-plan">IBM watsonx Orchestrate and RAG Integration Plan</h1>
+<h2 id="kessler-aegis-orbital-debris-threat-mitigation-system">Kessler Aegis — Orbital Debris Threat Mitigation System</h2>
+<p><strong>Repository:</strong> <code>CatonaMoses/Kessler-Aegis</code><br />
+<strong>Document purpose:</strong> Define how to add IBM watsonx Orchestrate and retrieval-augmented generation (RAG) capabilities to Kessler Aegis.</p>
+<hr />
+<h2 id="1-executive-summary">1. Executive Summary</h2>
+<p>Kessler Aegis already combines a FastAPI backend, SGP4 orbital propagation, Celestrak orbital data, IBM watsonx.ai inference, and a Next.js operator interface.</p>
+<p>The recommended architecture adds:</p>
+<ul>
+<li><strong>IBM watsonx.ai</strong> for foundation-model inference, embeddings, and reranking.</li>
+<li><strong>IBM watsonx Orchestrate</strong> for agent coordination, tool calling, multi-step workflows, and human approval steps.</li>
+<li><strong>RAG</strong> for grounding AI answers in authoritative mission procedures, spacecraft constraints, orbital-operation documentation, and governance policies.</li>
+<li><strong>FastAPI tools</strong> as the trusted layer for live orbital data, deterministic calculations, maneuver validation, and audit logging.</li>
+</ul>
+<p>The central design principle is:</p>
+<blockquote>
+<p>Use deterministic software for orbital mechanics, RAG for trusted knowledge, watsonx.ai for explanation and synthesis, and watsonx Orchestrate for controlled workflow execution.</p>
+</blockquote>
+<p>The AI must recommend and explain actions, while deterministic backend services validate all numerical results. Real maneuver authorization must remain subject to explicit human approval.</p>
+<hr />
+<h2 id="2-existing-system-context">2. Existing System Context</h2>
+<p>The repository currently contains:</p>
+<ul>
+<li>A Python FastAPI backend in <code>main.py</code>.</li>
+<li>SGP4 propagation for orbital objects.</li>
+<li>Live and local-fallback orbital data from Celestrak.</li>
+<li>IBM watsonx.ai model integration.</li>
+<li>A Next.js and TypeScript frontend in <code>kessler-aegis-ui/</code>.</li>
+<li>A 3D orbital visualization and operator HUD.</li>
+<li>AI-generated collision-avoidance analysis.</li>
+</ul>
+<p>The current system is therefore well positioned for an incremental integration. watsonx Orchestrate and RAG should be added around the existing services instead of replacing the orbital-propagation pipeline.</p>
+<hr />
+<h2 id="3-target-architecture">3. Target Architecture</h2>
+<pre><code class="language-text">+-----------------------+
+| Next.js Operator UI   |
+| - Globe               |
+| - Threat dashboard    |
+| - AI operations panel |
++-----------+-----------+
+            |
+            v
++-----------------------+
+| FastAPI Application    |
+| - Authentication       |
+| - API validation       |
+| - Tool endpoints       |
+| - Audit events         |
++----+------------+------+
+     |            |
+     v            v
++---------+  +------------------+
+| Orbital |  | RAG Service      |
+| Engine  |  | - Chunking       |
+| - SGP4  |  | - Embeddings     |
+| - TLE   |  | - Retrieval      |
+| - Risk  |  | - Citations      |
++---------+  +--------+---------+
+                       |
+                       v
+              +------------------+
+              | Vector Store      |
+              | Chroma/Milvus/    |
+              | Elasticsearch     |
+              +------------------+
+
++--------------------------------------+
+| IBM watsonx.ai                       |
+| - Foundation model inference         |
+| - Embeddings                         |
+| - Reranking                          |
++------------------+-------------------+
+                   |
+                   v
++--------------------------------------+
+| IBM watsonx Orchestrate              |
+| - Agent                              |
+| - Tool selection                     |
+| - Multi-step workflows               |
+| - Human approval                    |
+| - Escalation and audit coordination  |
++--------------------------------------+
+</code></pre>
+<h3 id="responsibility-boundaries">Responsibility boundaries</h3>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Responsibility</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Next.js UI</td>
+<td>Display threats, explanations, sources, maneuver options, and approvals</td>
+</tr>
+<tr>
+<td>FastAPI</td>
+<td>Secure application API and tool gateway</td>
+</tr>
+<tr>
+<td>SGP4/orbital engine</td>
+<td>Deterministic propagation and orbital calculations</td>
+</tr>
+<tr>
+<td>RAG service</td>
+<td>Retrieve relevant documents and return citations</td>
+</tr>
+<tr>
+<td>watsonx.ai</td>
+<td>Generate grounded explanations and structured recommendations</td>
+</tr>
+<tr>
+<td>watsonx Orchestrate</td>
+<td>Coordinate tools, workflows, approvals, and escalation</td>
+</tr>
+<tr>
+<td>Vector database</td>
+<td>Store and search document embeddings</td>
+</tr>
+<tr>
+<td>Audit store</td>
+<td>Record data, model, tool, and operator actions</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="4-watsonx-orchestrate-mission-operations-agent">4. watsonx Orchestrate Mission Operations Agent</h2>
+<p>Create a Kessler Aegis mission-operations agent in watsonx Orchestrate.</p>
+<p>The agent should interpret operator requests, call the appropriate backend tools, retrieve relevant knowledge, and coordinate a safe, traceable workflow.</p>
+<h3 id="example-operator-requests">Example operator requests</h3>
+<ul>
+<li>Assess the risk for a selected NORAD object.</li>
+<li>Show the five highest-risk debris objects.</li>
+<li>Explain why an object is classified as critical.</li>
+<li>Generate candidate collision-avoidance maneuvers.</li>
+<li>Compare three maneuver options.</li>
+<li>Identify the procedures applicable to a conjunction.</li>
+<li>Prepare a maneuver for operator approval.</li>
+<li>Create an incident report.</li>
+<li>Explain spacecraft or propulsion constraints.</li>
+<li>Summarize the evidence used in a recommendation.</li>
+</ul>
+<h3 id="recommended-orchestrate-tools">Recommended Orchestrate tools</h3>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>get_live_debris</code></td>
+<td>Retrieve current Celestrak or approved orbital data</td>
+</tr>
+<tr>
+<td><code>propagate_object</code></td>
+<td>Propagate a selected object to a specified epoch</td>
+</tr>
+<tr>
+<td><code>calculate_threat_score</code></td>
+<td>Calculate proximity, velocity, altitude, and risk metrics</td>
+</tr>
+<tr>
+<td><code>assess_conjunction</code></td>
+<td>Produce a structured conjunction assessment</td>
+</tr>
+<tr>
+<td><code>retrieve_mission_constraints</code></td>
+<td>Search RAG documents for spacecraft rules</td>
+</tr>
+<tr>
+<td><code>retrieve_operating_procedure</code></td>
+<td>Find applicable operational procedures</td>
+</tr>
+<tr>
+<td><code>generate_maneuver_options</code></td>
+<td>Produce candidate maneuver options using validated calculations</td>
+</tr>
+<tr>
+<td><code>evaluate_maneuver_fuel</code></td>
+<td>Estimate fuel use and burn duration</td>
+</tr>
+<tr>
+<td><code>validate_maneuver</code></td>
+<td>Check safety, fuel, orbital, and mission constraints</td>
+</tr>
+<tr>
+<td><code>request_operator_approval</code></td>
+<td>Pause a workflow for human review</td>
+</tr>
+<tr>
+<td><code>authorize_maneuver</code></td>
+<td>Record an approved simulated or controlled authorization</td>
+</tr>
+<tr>
+<td><code>create_incident_report</code></td>
+<td>Generate a report with evidence and citations</td>
+</tr>
+<tr>
+<td><code>record_audit_event</code></td>
+<td>Store the complete decision and execution trail</td>
+</tr>
+</tbody>
+</table>
+<h3 id="tool-design-requirements">Tool design requirements</h3>
+<p>Every tool should:</p>
+<ul>
+<li>Accept and return structured JSON.</li>
+<li>Validate input with Pydantic models.</li>
+<li>Return explicit errors rather than silently guessing.</li>
+<li>Include timestamps and data versions.</li>
+<li>Identify whether data is live, cached, or simulated.</li>
+<li>Be independently testable without an LLM.</li>
+<li>Return enough information for the UI and audit log.</li>
+</ul>
+<hr />
+<h2 id="5-rag-knowledge-base">5. RAG Knowledge Base</h2>
+<p>RAG should ground the assistant in stable, authoritative information. Current orbital positions and TLE data must not be treated as ordinary document knowledge; they should be obtained through live tools.</p>
+<h3 id="recommended-knowledge-collections">Recommended knowledge collections</h3>
+<h4 id="51-orbital-operations">5.1 Orbital operations</h4>
+<ul>
+<li>Conjunction-assessment procedures</li>
+<li>Collision-avoidance procedures</li>
+<li>Risk-classification thresholds</li>
+<li>Burn-window constraints</li>
+<li>Maneuver planning rules</li>
+<li>Fuel-reserve requirements</li>
+<li>Safe-mode procedures</li>
+<li>Abort and escalation procedures</li>
+</ul>
+<h4 id="52-spacecraft-information">5.2 Spacecraft information</h4>
+<ul>
+<li>Spacecraft mass</li>
+<li>Propulsion-system capabilities</li>
+<li>Maximum available delta-v</li>
+<li>Fuel capacity</li>
+<li>Minimum and maximum orbital constraints</li>
+<li>Attitude limitations</li>
+<li>Communications blackout windows</li>
+<li>Payload and mission constraints</li>
+<li>No-burn zones</li>
+</ul>
+<h4 id="53-orbital-and-debris-knowledge">5.3 Orbital and debris knowledge</h4>
+<ul>
+<li>COSMOS-2251 debris information</li>
+<li>Historical collision information</li>
+<li>TLE and OMM field definitions</li>
+<li>SGP4 limitations</li>
+<li>Orbital-regime descriptions</li>
+<li>Radar-cross-section definitions</li>
+<li>Threat-score methodology</li>
+</ul>
+<h4 id="54-governance-and-safety">5.4 Governance and safety</h4>
+<ul>
+<li>Human-in-the-loop requirements</li>
+<li>Maneuver authorization policy</li>
+<li>AI usage policy</li>
+<li>Model limitations</li>
+<li>Data-provenance requirements</li>
+<li>Incident-report templates</li>
+<li>Emergency escalation rules</li>
+</ul>
+<h3 id="keep-live-data-in-tools">Keep live data in tools</h3>
+<p>Use this separation:</p>
+<pre><code class="language-text">RAG: Stable procedures, policies, manuals, and explanations
+Tools: Current TLEs, positions, propagation, calculations, and system state
+</code></pre>
+<p>This prevents the assistant from using stale orbital information.</p>
+<hr />
+<h2 id="6-rag-processing-pipeline">6. RAG Processing Pipeline</h2>
+<pre><code class="language-text">Documents
+   |
+   v
+Document extraction
+   |
+   v
+Chunking and metadata tagging
+   |
+   v
+watsonx.ai embeddings
+   |
+   v
+Vector database
+   |
+   v
+Retriever and optional reranker
+   |
+   v
+Prompt with retrieved passages
+   |
+   v
+watsonx.ai foundation model
+   |
+   v
+Answer with citations and confidence
+</code></pre>
+<h3 id="document-metadata">Document metadata</h3>
+<p>Each indexed chunk should include:</p>
+<ul>
+<li>Document name</li>
+<li>Document version</li>
+<li>Section or page</li>
+<li>Document type</li>
+<li>Spacecraft or mission identifier</li>
+<li>Effective date</li>
+<li>Expiration date, if applicable</li>
+<li>Authority or owner</li>
+<li>Security classification</li>
+<li>Ingestion timestamp</li>
+<li>Content hash</li>
+</ul>
+<h3 id="vector-store-recommendations">Vector-store recommendations</h3>
+<table>
+<thead>
+<tr>
+<th>Environment</th>
+<th>Recommendation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Local prototype</td>
+<td>Chroma</td>
+</tr>
+<tr>
+<td>Demonstration or small deployment</td>
+<td>Milvus</td>
+</tr>
+<tr>
+<td>Enterprise search and metadata filtering</td>
+<td>Elasticsearch</td>
+</tr>
+<tr>
+<td>IBM data platform integration</td>
+<td>watsonx.data with an appropriate vector store</td>
+</tr>
+</tbody>
+</table>
+<h3 id="retrieval-behavior">Retrieval behavior</h3>
+<p>The RAG service should:</p>
+<ul>
+<li>Apply metadata filters before semantic search where possible.</li>
+<li>Retrieve a configurable number of passages.</li>
+<li>Apply a minimum relevance threshold.</li>
+<li>Optionally rerank retrieved passages.</li>
+<li>Return document and section citations.</li>
+<li>Refuse to answer when evidence is insufficient.</li>
+<li>Identify conflicting documents.</li>
+<li>Record retrieval metadata for audits.</li>
+</ul>
+<hr />
+<h2 id="7-proposed-repository-structure">7. Proposed Repository Structure</h2>
+<pre><code class="language-text">Kessler-Aegis/
+├── main.py
+├── rag/
+│   ├── __init__.py
+│   ├── ingest.py
+│   ├── embeddings.py
+│   ├── retriever.py
+│   ├── prompts.py
+│   ├── citations.py
+│   └── models.py
+├── orchestrate/
+│   ├── openapi.yaml
+│   ├── tools.py
+│   └── workflows/
+│       ├── threat_assessment.yaml
+│       └── maneuver_authorization.yaml
+├── knowledge/
+│   ├── procedures/
+│   ├── spacecraft/
+│   ├── orbital_mechanics/
+│   └── governance/
+├── tests/
+│   ├── test_rag.py
+│   ├── test_tools.py
+│   ├── test_maneuver_safety.py
+│   └── test_api_contracts.py
+└── kessler-aegis-ui/
+    └── src/app/
+        ├── components/
+        │   ├── AiOperationsPanel.tsx
+        │   ├── RagCitations.tsx
+        │   ├── ManeuverOptions.tsx
+        │   └── ApprovalDialog.tsx
+        └── page.tsx
+</code></pre>
+<hr />
+<h2 id="8-recommended-fastapi-endpoints">8. Recommended FastAPI Endpoints</h2>
+<pre><code class="language-text">POST /rag/ingest
+POST /rag/query
+GET  /rag/sources
+GET  /rag/status
+
+GET  /debris
+GET  /debris/{norad_id}
+POST /conjunctions/assess
+POST /maneuvers/options
+POST /maneuvers/validate
+POST /maneuvers/authorize
+
+GET  /audit/events
+POST /incident-reports
+</code></pre>
+<h3 id="example-rag-request">Example RAG request</h3>
+<pre><code class="language-json">{
+  &quot;question&quot;: &quot;What procedures apply to a critical conjunction at 780 km altitude?&quot;,
+  &quot;spacecraft_id&quot;: &quot;AEGIS-01&quot;,
+  &quot;threat_id&quot;: &quot;COSMOS-2251-DEB-001&quot;,
+  &quot;top_k&quot;: 5
+}
+</code></pre>
+<h3 id="example-rag-response">Example RAG response</h3>
+<pre><code class="language-json">{
+  &quot;answer&quot;: &quot;The conjunction requires operator review because it exceeds the critical-risk threshold and may require a validated avoidance maneuver.&quot;,
+  &quot;sources&quot;: [
+    {
+      &quot;document&quot;: &quot;critical-conjunction-procedure.pdf&quot;,
+      &quot;section&quot;: &quot;4.2&quot;,
+      &quot;relevance&quot;: 0.93
+    }
+  ],
+  &quot;confidence&quot;: 0.88,
+  &quot;requires_human_approval&quot;: true,
+  &quot;retrieval_timestamp&quot;: &quot;2026-10-24T00:00:00Z&quot;,
+  &quot;live_orbital_data_used&quot;: true
+}
+</code></pre>
+<p>Every response should expose:</p>
+<ul>
+<li>Source documents</li>
+<li>Sections or pages</li>
+<li>Retrieval scores</li>
+<li>Retrieval timestamp</li>
+<li>Data version</li>
+<li>TLE timestamp, when applicable</li>
+<li>Model and prompt version</li>
+<li>Whether human approval is required</li>
+</ul>
+<hr />
+<h2 id="9-grounded-maneuver-workflow">9. Grounded Maneuver Workflow</h2>
+<p>The primary end-to-end workflow should be called <strong>Assess and Prepare Maneuver</strong>.</p>
+<pre><code class="language-text">1. Operator selects a debris object.
+2. FastAPI retrieves current orbital data.
+3. SGP4 propagates the relevant objects.
+4. The backend calculates threat metrics.
+5. RAG retrieves procedures, spacecraft constraints, and approval rules.
+6. watsonx.ai generates an evidence-grounded explanation.
+7. The backend independently validates numerical results.
+8. The system displays maneuver options.
+9. The operator approves, rejects, or requests changes.
+10. The system records an immutable audit event.
+</code></pre>
+<h3 id="maneuver-output">Maneuver output</h3>
+<p>Each candidate should include:</p>
+<ul>
+<li>Collision probability</li>
+<li>Predicted miss distance</li>
+<li>Delta-v</li>
+<li>Burn duration</li>
+<li>Estimated fuel consumption</li>
+<li>Burn window</li>
+<li>Resulting orbital changes</li>
+<li>Operational risks</li>
+<li>Constraints checked</li>
+<li>RAG sources used</li>
+<li>Validation status</li>
+<li>Approval status</li>
+</ul>
+<h3 id="safety-boundary">Safety boundary</h3>
+<p>watsonx Orchestrate should recommend and prepare a maneuver, but it should not autonomously issue a real spacecraft command.</p>
+<p>The required sequence is:</p>
+<pre><code class="language-text">AI recommendation
+      |
+      v
+Deterministic safety validation
+      |
+      v
+Operator approval
+      |
+      v
+Mission-control export or command gateway
+</code></pre>
+<p>For a prototype, <code>authorize_maneuver</code> should record a simulated authorization only.</p>
+<hr />
+<h2 id="10-user-interface-features">10. User Interface Features</h2>
+<p>Add an <strong>AI Operations</strong> panel to the existing dashboard.</p>
+<h3 id="recommended-features">Recommended features</h3>
+<ul>
+<li>Natural-language mission assistant</li>
+<li>Explain-this-threat action</li>
+<li>RAG source citations</li>
+<li>Threat-assessment timeline</li>
+<li>Candidate maneuver comparison</li>
+<li>Delta-v and fuel charts</li>
+<li>Confidence and uncertainty display</li>
+<li>Human-approval warning</li>
+<li>Approval and rejection workflow</li>
+<li>Audit-history viewer</li>
+<li>Knowledge-base refresh status</li>
+<li>Tool-execution trace</li>
+<li>TLE source and age display</li>
+<li>Model and prompt version display</li>
+<li>Live, cached, or simulated data indicator</li>
+</ul>
+<h3 id="example-operator-panel">Example operator panel</h3>
+<pre><code class="language-text">THREAT: COSMOS-2251 DEB-001
+RISK: CRITICAL
+MISS DISTANCE: 0.12 km
+COLLISION PROBABILITY: 0.071
+DATA AGE: 4 minutes
+
+AI RECOMMENDATION
+Option A: delta-v 0.42 m/s | Fuel 0.8 kg | Miss distance 2.8 km
+Option B: delta-v 0.61 m/s | Fuel 1.2 kg | Miss distance 5.4 km
+
+EVIDENCE
+- Critical Conjunction Procedure, Section 4.2
+- AEGIS-01 Propulsion Constraints, Section 3
+- Current SGP4 propagation result
+
+[VALIDATE] [REQUEST APPROVAL] [REJECT]
+</code></pre>
+<hr />
+<h2 id="11-environment-variables">11. Environment Variables</h2>
+<p>Add the following to <code>.env.example</code> and keep all secrets server-side:</p>
+<pre><code class="language-env">WATSONX_URL=
+WATSONX_APIKEY=
+WATSONX_PROJECT_ID=
+
+WATSONX_ORCHESTRATE_URL=
+WATSONX_ORCHESTRATE_APIKEY=
+WATSONX_ORCHESTRATE_AGENT_ID=
+
+RAG_VECTOR_STORE=milvus
+RAG_VECTOR_URL=
+RAG_VECTOR_APIKEY=
+RAG_COLLECTION_NAME=kessler_aegis_knowledge
+
+RAG_TOP_K=5
+RAG_MIN_RELEVANCE_SCORE=0.70
+RAG_REQUIRE_CITATIONS=true
+
+NEXT_PUBLIC_API_URL=http://127.0.0.1:8000
+</code></pre>
+<p>Never expose IBM API keys or vector-store credentials to the Next.js browser client.</p>
+<hr />
+<h2 id="12-implementation-plan">12. Implementation Plan</h2>
+<h3 id="phase-1-rag-prototype">Phase 1 — RAG prototype</h3>
+<ol>
+<li>Create the <code>knowledge/</code> directory.</li>
+<li>Add five to ten authoritative documents.</li>
+<li>Implement extraction, chunking, and metadata tagging.</li>
+<li>Generate embeddings.</li>
+<li>Store vectors in Chroma or Milvus.</li>
+<li>Add <code>POST /rag/query</code>.</li>
+<li>Display citations in the UI.</li>
+<li>Evaluate retrieval against predefined questions.</li>
+</ol>
+<h3 id="phase-2-backend-tool-layer">Phase 2 — Backend tool layer</h3>
+<ol>
+<li>Convert existing backend functions into explicit tools.</li>
+<li>Add Pydantic input and output models.</li>
+<li>Add validation and structured errors.</li>
+<li>Publish an OpenAPI specification.</li>
+<li>Test each tool without an LLM.</li>
+<li>Add audit events for tool execution.</li>
+</ol>
+<h3 id="phase-3-watsonx-orchestrate">Phase 3 — watsonx Orchestrate</h3>
+<ol>
+<li>Create the Kessler Aegis agent.</li>
+<li>Register or import the OpenAPI tools.</li>
+<li>Define the threat-assessment workflow.</li>
+<li>Define the maneuver-preparation workflow.</li>
+<li>Add human approval checkpoints.</li>
+<li>Add escalation and failure handling.</li>
+<li>Connect the Next.js operations panel.</li>
+</ol>
+<h3 id="phase-4-safety-and-production-hardening">Phase 4 — Safety and production hardening</h3>
+<ol>
+<li>Add authentication and role-based access control.</li>
+<li>Add rate limiting.</li>
+<li>Add document versioning.</li>
+<li>Track model, prompt, and retrieval versions.</li>
+<li>Add retrieval-quality evaluation.</li>
+<li>Add numerical maneuver regression tests.</li>
+<li>Add fallback behavior when external services are unavailable.</li>
+<li>Require explicit approval before authorization.</li>
+<li>Add monitoring and alerting.</li>
+<li>Conduct security and operational reviews.</li>
+</ol>
+<hr />
+<h2 id="13-features-added-by-the-integration">13. Features Added by the Integration</h2>
+<p>Together, watsonx Orchestrate and RAG would provide:</p>
+<ol>
+<li>Natural-language mission control.</li>
+<li>Multi-step threat-assessment workflows.</li>
+<li>Grounded answers based on mission documentation.</li>
+<li>Source-cited explanations.</li>
+<li>Live-data tool calling.</li>
+<li>Candidate maneuver comparison.</li>
+<li>Human-in-the-loop authorization.</li>
+<li>Consistent operating procedures.</li>
+<li>Auditability and decision traceability.</li>
+<li>Reusable integrations with future mission systems.</li>
+<li>Operator training and simulation support.</li>
+<li>Reduced hallucination risk.</li>
+<li>Faster incident-report generation.</li>
+<li>Separation between deterministic calculations and generative explanations.</li>
+<li>Clear visibility into data freshness and uncertainty.</li>
+</ol>
+<hr />
+<h2 id="14-testing-strategy">14. Testing Strategy</h2>
+<h3 id="rag-tests">RAG tests</h3>
+<ul>
+<li>Verify relevant documents are retrieved.</li>
+<li>Verify irrelevant documents are excluded.</li>
+<li>Verify citations point to real sections.</li>
+<li>Verify stale or expired documents are filtered.</li>
+<li>Verify insufficient evidence produces a safe refusal.</li>
+<li>Verify conflicting documents are reported.</li>
+</ul>
+<h3 id="tool-tests">Tool tests</h3>
+<ul>
+<li>Test live-data retrieval and local fallback.</li>
+<li>Test malformed NORAD identifiers.</li>
+<li>Test missing spacecraft constraints.</li>
+<li>Test invalid epochs.</li>
+<li>Test SGP4 propagation failures.</li>
+<li>Test numerical boundary conditions.</li>
+</ul>
+<h3 id="safety-tests">Safety tests</h3>
+<ul>
+<li>Reject maneuvers exceeding delta-v limits.</li>
+<li>Reject maneuvers that violate fuel reserves.</li>
+<li>Reject maneuvers without required evidence.</li>
+<li>Require approval for critical or high-risk events.</li>
+<li>Prevent direct execution from an LLM-only path.</li>
+<li>Verify duplicate authorization requests are handled safely.</li>
+</ul>
+<h3 id="evaluation-questions">Evaluation questions</h3>
+<p>Create a fixed evaluation set, such as:</p>
+<ul>
+<li>Which procedure applies to a critical conjunction?</li>
+<li>What spacecraft constraint limits this maneuver?</li>
+<li>Which source defines the risk threshold?</li>
+<li>What should happen when TLE data is stale?</li>
+<li>When is operator approval mandatory?</li>
+</ul>
+<p>Track retrieval precision, citation accuracy, groundedness, and refusal quality.</p>
+<hr />
+<h2 id="15-security-and-governance">15. Security and Governance</h2>
+<p>The implementation should include:</p>
+<ul>
+<li>Server-side secret storage.</li>
+<li>Role-based permissions.</li>
+<li>Separate viewer, analyst, approver, and administrator roles.</li>
+<li>Prompt-injection-resistant document handling.</li>
+<li>Document ownership and versioning.</li>
+<li>Input and output validation.</li>
+<li>Audit logs for every tool call.</li>
+<li>Model and prompt version tracking.</li>
+<li>Clear data-retention policy.</li>
+<li>Explicit distinction between simulated and operational actions.</li>
+<li>Human approval for high-impact decisions.</li>
+</ul>
+<p>RAG documents should be treated as untrusted input until validated. A document must not be allowed to override system safety rules or instruct the agent to bypass approval controls.</p>
+<hr />
+<h2 id="16-recommended-first-milestone">16. Recommended First Milestone</h2>
+<p>The first useful milestone should be a read-only, grounded threat assistant:</p>
+<ol>
+<li>The operator selects a debris object.</li>
+<li>The backend retrieves current orbital data.</li>
+<li>The backend calculates threat metrics.</li>
+<li>RAG retrieves applicable procedures and spacecraft constraints.</li>
+<li>watsonx.ai explains the threat with citations.</li>
+<li>The UI displays the evidence and data freshness.</li>
+<li>No maneuver authorization is performed yet.</li>
+</ol>
+<p>After this is reliable, add candidate maneuvers, deterministic validation, and human approval.</p>
+<hr />
+<h2 id="17-final-recommendation">17. Final Recommendation</h2>
+<p>Implement the integration incrementally and preserve strong boundaries:</p>
+<ul>
+<li><strong>FastAPI and SGP4</strong> remain responsible for orbital truth.</li>
+<li><strong>watsonx.ai</strong> provides grounded language generation and retrieval services.</li>
+<li><strong>RAG</strong> supplies stable, authoritative operational knowledge.</li>
+<li><strong>watsonx Orchestrate</strong> coordinates tools and approvals.</li>
+<li><strong>Next.js</strong> provides the operator experience.</li>
+<li><strong>Human operators</strong> remain responsible for final authorization.</li>
+</ul>
+<p>This approach gives Kessler Aegis an explainable, extensible, and safer AI operations layer without allowing a language model to independently control orbital calculations or spacecraft actions.</p>
+</body>
+</html>
